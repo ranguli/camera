@@ -1,7 +1,7 @@
-include <../constants.scad>;
+include <../lib/dotSCAD/src/rounded_square.scad>;
+include <../lib/brass_insert.scad>;
 
-
-module body(camera_body_dimensions, camera_format_parameters, camera_lens_parameters, film_back_parameters, film_compartment_dimensions, film_canister_dimensions, takeup_spool_compartment_dimensions, use_knob_washers) {
+module body(camera_body_dimensions, camera_format_parameters, camera_lens_parameters, film_back_parameters, film_compartment_dimensions, film_canister_dimensions, takeup_spool_compartment_dimensions, screw_insert_parameters, knob_dimensions, use_knob_washers) {
 
     body_width = camera_body_dimensions[0];
     body_height = camera_body_dimensions[1];
@@ -9,16 +9,16 @@ module body(camera_body_dimensions, camera_format_parameters, camera_lens_parame
 
     lens_opening = camera_lens_parameters[0];
     lens_opening_diameter = camera_lens_parameters[1];
-
+    focal_length = camera_lens_parameters[2];
+    
     format = camera_format_parameters[0];
     perforations = camera_format_parameters[1];
-    focal_length = camera_format_parameters[2];
 
     film_back_cutout_depth = film_back_parameters[1];
 
     difference() {
         body_blank(body_width, body_height, body_depth);
-        film_compartment(camera_body_dimensions, film_compartment_dimensions, film_canister_dimensions, KNOB_DIMENSIONS, film_back_parameters);
+        film_compartment(camera_body_dimensions, film_compartment_dimensions, film_canister_dimensions, knob_dimensions, film_back_parameters);
 
         film_back_mating_surface(camera_body_dimensions, film_back_parameters);
 
@@ -26,80 +26,45 @@ module body(camera_body_dimensions, camera_format_parameters, camera_lens_parame
             knob_washers();
         }
 
-        dark_chamber(lens_opening_diameter, perforations, focal_length, format);
+        dark_chamber(camera_body_dimensions, camera_format_parameters, camera_lens_parameters);
 
-        takeup_spool_compartment(camera_body_dimensions, film_compartment_dimensions, film_canister_dimensions, KNOB_DIMENSIONS, film_back_parameters);
-
-        // Cutout for take up spool
-        film_plane(body_width, focal_length, format, perforations);
-        brass_screw_insert_cutout();
+        takeup_spool_compartment(camera_body_dimensions, film_compartment_dimensions, film_canister_dimensions, knob_dimensions, film_back_parameters);
+        
+        film_plane(camera_body_dimensions, camera_format_parameters, camera_lens_parameters, film_back_parameters);
+        
+        color("blue")
+        brass_inserts(camera_body_dimensions, screw_insert_parameters, film_back_parameters);
 
     }
 }
-
-
-body(CAMERA_BODY_DIMENSIONS, CAMERA_FORMAT_PARAMETERS, CAMERA_LENS_PARAMETERS, FILM_BACK_PARAMETERS, FILM_COMPARTMENT_DIMENSIONS, FILM_CANISTER_DIMENSIONS, TAKEUP_SPOOL_COMPARTMENT_DIMENSIONS, USE_KNOB_WASHERS);
-
 
 module body_blank(width, height, depth) {
-
-    difference() {
-        union(){
-            ////Cube de base
-            cube([width,height,depth],false);
-        }
-
-        // Rounding on the exterior corners of the case
-        difference(){
-            translate([2,2,depth/2])
-            cube([4,4,depth+5],true);
-
-            translate([4,4,-1])
-            cylinder(h=depth+10, r=4, $fs=0.5);
-        }
-
-        difference(){
-            translate([width-2,2,depth/2])
-            cube([4,4,depth+5],true);
-
-            translate([width-4,4,-1])
-            cylinder(h=depth+10, r=4, $fs=0.5);
-        }
-
-        difference(){
-            translate([2,height-2,depth/2])
-            cube([4,4,depth+5],true);
-
-            translate([4,height-4,-1])
-            cylinder(h=depth+10, r=4, $fs=0.5);
-        }
-
-        difference(){
-            translate([width-2,height-2,depth/2])
-            cube([4,4,depth+5],true);
-
-            translate([width-4,height-4,-1])
-            cylinder(h=depth+10, r=4, $fs=0.5);
-        }
-
-
-
-        /**
-        ////cylindres languettes
-        translate([18,58,CAMERA_BODY_DEPTH+1])
-        rotate([90,0,0])
-        cylinder(h=5, r=6, $fs=0.5);
-
-        translate([54 + FORMAT + (2*PERFORATIONS),58,CAMERA_BODY_DEPTH+1])
-        rotate([90,0,0])
-        cylinder(h=5, r=6, $fs=0.5);
-        **/
-    }
+    linear_extrude(depth)
+        rounded_square(
+        size = [width, height],
+        corner_r = 3
+    );
 }
 
-module film_plane(body_width, focal_length, format, perforations) {
-     translate([body_width/2,31,focal_length+2])
-     cube([10+format+2*perforations,34,4],true);
+module film_plane(camera_body_dimensions, camera_format_parameters, camera_lens_parameters, film_back_parameters) {
+     body_width = camera_body_dimensions[0];
+     body_height = camera_body_dimensions[1];
+     body_depth = camera_body_dimensions[2];
+
+     focal_length = camera_lens_parameters[3];
+
+     format_width = camera_format_parameters[0] * 1.5;
+     format_height = camera_format_parameters[1] * 1.15;
+     perforations = camera_format_parameters[2];
+
+
+     film_back_cutout_depth = film_back_parameters[1];
+
+     //translate([body_width/2,31,focal_length+2])
+     //cube([10+format_width+2*perforations,34,4],true);
+
+    translate([body_width/2-format_width/2,body_height/2-format_height/2,body_depth-film_back_cutout_depth-4])
+    cube([format_width,format_height,4]);
 }
 
 
@@ -121,13 +86,11 @@ module takeup_spool_compartment(camera_body_dimensions, takeup_spool_compartment
     takeup_spool_compartment_width = takeup_spool_compartment_dimensions[0];
     takeup_spool_compartment_depth = takeup_spool_compartment_dimensions[1];
     takeup_spool_compartment_height = takeup_spool_compartment_dimensions[2];
-    takeup_spool_compartment_overall_height = takeup_spool_compartment_height + knob_shaft_length;
-
 
     film_back_bezel = film_back_parameters[0];
     film_back_cutout_depth = film_back_parameters[1];
 
-    translate([body_width-film_back_bezel-takeup_spool_compartment_width,takeup_spool_compartment_overall_height-body_height-film_back_bezel,body_depth-film_back_cutout_depth-takeup_spool_compartment_width]) {
+    translate([body_width-film_back_bezel-takeup_spool_compartment_width,film_back_bezel,body_depth-film_back_cutout_depth-takeup_spool_compartment_width]) {
             // Cutout for the film compartment knob.
             translate([takeup_spool_compartment_width/2,takeup_spool_compartment_height+knob_shaft_length/2,takeup_spool_compartment_width/2])
             color("red") {
@@ -157,16 +120,27 @@ module takeup_spool_compartment(camera_body_dimensions, takeup_spool_compartment
     }
 }
 
-module dark_chamber(lens_opening_diameter, perforations, focal_length, format) {
+module dark_chamber(camera_body_dimensions, camera_format_parameters, camera_lens_parameters) {
+
+    body_width = camera_body_dimensions[0];
+
+    format_width = camera_format_parameters[0];
+    format_height = camera_format_parameters[1];
+    perforations = camera_format_parameters[2];
+
+    lens_opening_diameter = camera_lens_parameters[0];
+    focal_length = camera_lens_parameters[2];
+
+
     CubePoints = [
         [ -lens_opening_diameter/2,  -lens_opening_diameter/2,  0 ],  //0
         [ lens_opening_diameter/2,  -lens_opening_diameter/2,  0 ],  //1
         [ lens_opening_diameter/2,  lens_opening_diameter/2,  0 ],  //2
         [  -lens_opening_diameter/2,  lens_opening_diameter/2,  0 ],  //3
-        [  -(format/2)-perforations,  -12-perforations,  focal_length-8 ],  //4
-        [ (format/2)+perforations,  -12-perforations,  focal_length-8 ],  //5
-        [ (format/2)+perforations,  12+perforations,  focal_length-8 ],  //6
-        [ -(format/2)-perforations,  12+perforations,  focal_length-8 ]
+        [  -(format_width/2)-perforations,  -12-perforations,  focal_length-8 ],  //4
+        [ (format_width/2)+perforations,  -12-perforations,  focal_length-8 ],  //5
+        [ (format_width/2)+perforations,  12+perforations,  focal_length-8 ],  //6
+        [ -(format_width/2)-perforations,  12+perforations,  focal_length-8 ]
     ]; //7
 
     CubeFaces = [
@@ -178,28 +152,41 @@ module dark_chamber(lens_opening_diameter, perforations, focal_length, format) {
         [7,4,0,3]   // left
     ];
 
-    translate([CAMERA_BODY_WIDTH/2,31,8])
+    translate([body_width/2,31,8])
     polyhedron(CubePoints,CubeFaces);
 
     // lens opening
-    translate([+CAMERA_BODY_WIDTH/2,+31,-2])
-    cylinder(h=8+4, r=LENS_OPENING_DIAMETER, $fs=0.5);
+    translate([body_width/2,+31,-2])
+    cylinder(h=8+4, r=lens_opening_diameter/2, $fs=0.5);
 }
 
 
 
+
+
 // Holes for brass screw inserts
-module brass_screw_insert_cutout() {
+module brass_inserts(camera_body_dimensions, screw_insert_parameters, film_back_parameters) {
+    body_width = camera_body_dimensions[0];
+    body_height = camera_body_dimensions[1];
+    
+    insert_diameter = screw_insert_parameters[0];
+    screw_length = screw_insert_parameters[1];
+    screw_insert_z = screw_insert_parameters[3];
+    
+    film_back_bezel = film_back_parameters[0];
+    
+    screw_position = (insert_diameter / 2) + film_back_bezel;
+    
     screw_insert_coords = [
-        [5.1, 5.1, SCREW_INSERT_Z],
-        [CAMERA_BODY_WIDTH-5.1, 5.1, SCREW_INSERT_Z],
-        [5.1, CAMERA_BODY_HEIGHT-5.1, SCREW_INSERT_Z],
-        [CAMERA_BODY_WIDTH-5.1, CAMERA_BODY_HEIGHT-5.1, SCREW_INSERT_Z]
+        [screw_position, screw_position, screw_insert_z],
+        [body_width-screw_position, screw_position, screw_insert_z],
+        [screw_position, body_height-screw_position, screw_insert_z],
+        [body_width-screw_position, body_height-screw_position, screw_insert_z]
     ];
 
     for (i = [0:3]) {
         translate([screw_insert_coords[i][0], screw_insert_coords[i][1], screw_insert_coords[i][2]])
-        cylinder(h=SCREW_INSERT_DEPTH, r=2, $fs=0.5);
+        brass_insert(insert_diameter, screw_length);
     }
 }
 
@@ -222,13 +209,11 @@ module film_compartment(camera_body_dimensions, film_compartment_dimensions, fil
     film_compartment_width = film_compartment_dimensions[0];
     film_compartment_depth = film_compartment_dimensions[1];
     film_compartment_height = film_compartment_dimensions[2];
-    film_compartment_overall_height = film_compartment_height + knob_shaft_length;
-
 
     film_back_bezel = film_back_parameters[0];
     film_back_cutout_depth = film_back_parameters[1];
 
-    translate([film_back_bezel,film_compartment_overall_height-body_height-film_back_bezel,body_depth-film_back_cutout_depth-film_compartment_width]) {
+    translate([film_back_bezel,film_back_bezel,body_depth-film_back_cutout_depth-film_compartment_width]) {
             // Cutout for the film compartment knob.
             translate([film_compartment_width/2,film_compartment_height+knob_shaft_length/2,film_compartment_width/2])
             color("red") {
@@ -303,7 +288,6 @@ module knob_washers() {
 }
 
 module case_internals(use_washers) {
-
 
     // Rounding on the cutout for the film back
     difference(){

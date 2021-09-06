@@ -1,82 +1,51 @@
-
-
-
-module back(width, height) {
-    rotate([0,180,0]) translate([-width,-height-20,48])
+module film_back(camera_body_dimensions, film_back_parameters, camera_format_parameters, screw_insert_parameters) {
+    body_width = camera_body_dimensions[0];
+    body_height = camera_body_dimensions[1];
+    body_depth = camera_body_dimensions[2];
+     
+    format_width = camera_format_parameters[0];
+    
+    film_back_bezel = film_back_parameters[0];
+    film_back_cutout_depth = film_back_parameters[1];
+ 
+    
     difference() {
-        ////Plaque :
-        union(){
-            translate([width/2,-5+height,-50]) cube([16+(8/(24/format)),24,4],true);
-            translate([width/2,-32+height,-50]) cube([width,height,4],true);
-            translate([width/2,-32+height,-52.4]) cube([width-6.2,height-6.2,4],true);
+        union() {
+            linear_extrude(film_back_cutout_depth)
+                rounded_square(
+                size = [body_width, body_height],
+                corner_r = 3
+            );
+            translate([0,film_back_bezel,film_back_cutout_depth])
+            cube([body_width, body_height-(film_back_bezel*2), film_back_cutout_depth]);
+        } 
+        translate([0,0,film_back_cutout_depth/2])
+        film_back_brass_inserts(camera_body_dimensions, screw_insert_parameters, film_back_parameters);
+    }
+}
 
-        };
+// Holes for brass screw inserts
+module film_back_brass_inserts(camera_body_dimensions, screw_insert_parameters, film_back_parameters) {
+    body_width = camera_body_dimensions[0];
+    body_height = camera_body_dimensions[1];
+    
+    insert_diameter = screw_insert_parameters[0];
+    screw_length = screw_insert_parameters[1];
+    screw_insert_z = screw_insert_parameters[3];
+    
+    film_back_bezel = film_back_parameters[0];
+    
+    screw_position = (insert_diameter / 2) + film_back_bezel;
+    
+    screw_insert_coords = [
+        [screw_position, screw_position, screw_insert_z],
+        [body_width-screw_position, screw_position, screw_insert_z],
+        [screw_position, body_height-screw_position, screw_insert_z],
+        [body_width-screw_position, body_height-screw_position, screw_insert_z]
+    ];
 
-
-        ////Viseur :
-        translate([width/2,-5+height,-55])
-        cube([8/(24/format),8,20],true);
-
-        translate([width/2,-5+height,-54])
-        cube([6.2+(8/(24/format)),14.2,4],true);
-
-
-        ////arrondis :
-        difference() {
-            translate([2,2,-55]) cube([4,4,20],true);
-            translate([4,4,-65]) cylinder(h=20, r=4, $fs=0.5);
-        }
-
-        difference() {
-            translate([width-2,2,-55]) cube([4,4,20],true);
-            translate([width-4,4,-65]) cylinder(h=20, r=4, $fs=0.5);
-        }
-
-        difference() {
-            translate([2,height-2,-55]) cube([4,4,20],true);
-            translate([4,height-4,-65]) cylinder(h=20, r=4, $fs=0.5);
-        }
-
-        difference() {
-            translate([width-2,height-2,-55]) cube([4,4,20],true);
-            translate([width-4,height-4,-65]) cylinder(h=20, r=4, $fs=0.5);
-        }
-        ////arrondis viseur :
-        difference() {
-            translate([(width/2)+((16+(8/(24/format)))/2)-2,height+5,-55])
-            cube([4,4,20],true);
-
-            translate([(width/2)+((16+(8/(24/format)))/2)-4,height+3,-65])
-            cylinder(h=20, r=4, $fs=0.5);
-        }
-
-        difference() {
-            translate([(width/2)-((16+(8/(24/format)))/2)+2,height+5,-55])
-            cube([4,4,20],true);
-
-            translate([(width/2)-((16+(8/(24/format)))/2)+4,height+3,-65])
-            cylinder(h=20, r=4, $fs=0.5);
-        }
-
-        ////percements :
-        translate([4.1,4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([6.1,4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([4.1,6.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([5.1,5.1,-50-4.4]) cylinder(h=6.4, r=2, $fs=0.5);
-
-        translate([width-4.1,4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([width-6.1,4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([width-4.1,6.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([width-5.1,5.1,-50-4.4]) cylinder(h=6.4, r=2, $fs=0.5);
-
-        translate([4.1,height-4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([6.1,height-4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([4.1,height-6.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([5.1,height-5.1,-50-4.4]) cylinder(h=6.4, r=2, $fs=0.5);
-
-        translate([width-4.1,height-4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([width-6.1,height-4.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([width-4.1,height-6.1,-50-3.2]) cube([2,2,2.4],true);
-        translate([width-5.1,height-5.1,-50-4.4]) cylinder(h=6.4, r=2, $fs=0.5);
+    for (i = [0:3]) {
+        translate([screw_insert_coords[i][0], screw_insert_coords[i][1], 0])
+        brass_insert(insert_diameter, screw_length);
     }
 }

@@ -1,0 +1,6 @@
+[submodule "lib/Round-Anything"]
+	path = lib/Round-Anything
+	url = https://github.com/Irev-Dev/Round-Anything
+[submodule "lib/dotSCAD"]
+	path = lib/dotSCAD
+	url = https://github.com/JustinSDK/dotSCAD

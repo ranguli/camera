@@ -11,7 +11,6 @@ module knob(knob_dimensions) {
     knob_diameter           = knob_dimensions[4];
     knob_height             = knob_dimensions[5];
 
-
     knurling_width = 1.5;
     knurling_height = 2;
     knurling_dp = 0.5;
@@ -27,5 +26,3 @@ module knob(knob_dimensions) {
         cylinder(h=knob_shaft_length, r=knob_shaft_diameter/2);
     }
 }
-
-knob(KNOB_DIMENSIONS);
